@@ -1,0 +1,20 @@
+name: population_gcn_aicha
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy
+  - scipy
+  - scikit-learn
+  - nilearn
+  - nibabel
+  - joblib
+  - networkx
+  - matplotlib
+  - tqdm
+  - pip
+  - pip:
+      - grpcio==1.51.3
+      - tensorflow==2.11.1
+
+
