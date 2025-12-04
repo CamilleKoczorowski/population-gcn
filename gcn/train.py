@@ -2,7 +2,9 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 
 from gcn.utils import *
 from gcn.models import GCN, MLP
