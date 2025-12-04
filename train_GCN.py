@@ -25,6 +25,7 @@ tf.disable_v2_behavior()
 
 
 import random
+import sys
 from gcn.utils import *
 from gcn.models import MLP, Deep_GCN
 import sklearn.metrics
@@ -48,6 +49,8 @@ def get_train_test_masks(labels, idx_train, idx_val, idx_test):
 def run_training(adj, features, labels, idx_train, idx_val, idx_test,
                  params):
 
+    sys.argv = [sys.argv[0]]  # To avoid errors with tf.app.flags
+    
     # Set random seed
     random.seed(params['seed'])
     np.random.seed(params['seed'])
