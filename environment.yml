@@ -1,0 +1,17 @@
+name: population_gcn
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - numpy
+  - scipy
+  - scikit-learn
+  - nilearn
+  - nibabel
+  - joblib
+  - networkx
+  - matplotlib
+  - tqdm
+  - pip
+  - pip:
+      - tensorflow==2.13
