@@ -39,12 +39,13 @@ population-gcn/
 
 ## 3. Exécution d’un entraînement
 ```bash
-python main_ABIDE.py --folds 0 --epochs 1
+python main_ABIDE.py --folds 11 --epochs 150 --suffix run1
 ```
 
 Paramètres principaux :
-- --folds : numéro du fold (0–9)
+- --folds : numéro du fold (0–11)
 - --epochs : nombre d’epochs
+- --suffix : nom du fichier de résultat sauvegardé
 - --learning_rate : optionnel
 - --dropout : optionnel
 
