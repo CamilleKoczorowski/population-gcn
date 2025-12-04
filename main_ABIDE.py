@@ -25,6 +25,8 @@ from scipy.spatial import distance
 from sklearn.linear_model import RidgeClassifier
 import sklearn.metrics
 import scipy.io as sio
+import os
+from pathlib import Path
 
 import ABIDEParser as Reader
 import train_GCN as Train
@@ -216,11 +218,39 @@ def main():
         print('overall accuracy %f' + str(np.sum(scores_acc) * 1. / fold_size))
         print('overall AUC %f' + str(np.mean(scores_auc)))
 
+    #if args.save == 1:
+    #    result_name = 'ABIDE_classification.mat'
+    #    sio.savemat('/vol/medic02/users/sparisot/python/graphCNN/results/' + result_name + '.mat',
+    #                {'lin': scores_lin, 'lin_auc': scores_auc_lin,
+    #                 'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size})
+
+    root = Path(os.getcwd()).resolve()
     if args.save == 1:
-        result_name = 'ABIDE_classification.mat'
-        sio.savemat('/vol/medic02/users/sparisot/python/graphCNN/results/' + result_name + '.mat',
-                    {'lin': scores_lin, 'lin_auc': scores_auc_lin,
-                     'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size})
+        result_name = 'ABIDE_classification'  # sans .mat
+
+        # Ajout du suffixe utilisateur
+        if args.suffix != "":
+            result_name = f"{result_name}_{args.suffix}"
+
+        # Dossier sur ton Drive
+        save_dir = root / "results"
+        save_dir.mkdir(parents=True, exist_ok=True)
+        #os.makedirs(save_dir, exist_ok=True)
+
+        #out_path = os.path.join(save_dir, result_name + ".mat")
+        out_path = save_dir / f"{result_name}.mat"
+        print("Saving results to:", out_path)
+
+        sio.savemat(
+            out_path,
+            {
+                'lin': scores_lin,
+                'lin_auc': scores_auc_lin,
+                'acc': scores_acc,
+                'auc': scores_auc,
+                'folds': fold_size
+            }
+        )
 
 if __name__ == "__main__":
     main()
