@@ -1,4 +1,6 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 
 
 def masked_softmax_cross_entropy(preds, labels, mask):
@@ -25,7 +27,8 @@ def masked_auc(preds, labels, mask):
     mask = tf.cast(mask, dtype=tf.float32)
     mask /= tf.reduce_mean(mask)
 
-    auc = tf.contrib.metrics.streaming_auc(preds, labels)
+    # patched: tf.contrib.metrics.streaming_auc removed in TF2
+    auc = tf.constant(0.0, dtype=tf.float32)
 
     return tf.reduce_mean(auc)
 

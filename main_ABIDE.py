@@ -163,7 +163,7 @@ def main():
     # Initialise variables for class labels and acquisition sites
     y_data = np.zeros([num_nodes, num_classes])
     y = np.zeros([num_nodes, 1])
-    site = np.zeros([num_nodes, 1], dtype=np.int)
+    site = np.zeros([num_nodes, 1], dtype=int)
 
     # Get class labels and acquisition site for all subjects
     for i in range(num_nodes):
