@@ -109,6 +109,8 @@ def main():
     parser.add_argument('--atlas', default='ho', help='atlas for network construction (node definition) (default: ho, '
                                                       'see preprocessed-connectomes-project.org/abide/Pipelines.html '
                                                       'for more options )')
+    parser.add_argument('--suffix', type=str, default="",
+                    help='Suffixe ajouté au nom du fichier de résultats (.mat)')
     parser.add_argument('--epochs', default=150, type=int, help='Number of epochs to train')
     parser.add_argument('--num_features', default=2000, type=int, help='Number of features to keep for '
                                                                        'the feature selection step (default: 2000)')
