@@ -24,7 +24,7 @@ from sklearn.model_selection import StratifiedKFold
 from scipy.spatial import distance
 from sklearn.linear_model import RidgeClassifier
 import sklearn.metrics
-import scipy.io as sio
+import csv
 import os
 from pathlib import Path
 
@@ -54,8 +54,6 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
         fold_size   : number of test samples
     """
 
-    print(len(train_ind))
-
     # selection of a subset of data if running experiments with a subset of the training set
     labeled_ind = Reader.site_percentage(train_ind, params['num_training'], subject_IDs)
 
@@ -82,13 +80,9 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
     pred = clf.decision_function(x_data[test_ind, :])
     lin_auc = sklearn.metrics.roc_auc_score(y[test_ind] - 1, pred)
 
-    print("Linear Accuracy: " + str(lin_acc))
-
     # Classification with GCNs
     test_acc, test_auc = Train.run_training(final_graph, sparse.coo_matrix(x_data).tolil(), y_data, train_ind, val_ind,
                                             test_ind, params)
-
-    print(test_acc)
 
     # return number of correctly classified samples instead of percentage
     test_acc = int(round(test_acc * len(test_ind)))
@@ -190,7 +184,6 @@ def main():
                                      for train_ind, test_ind in
                                      reversed(list(skf.split(np.zeros(num_nodes), np.squeeze(y)))))
 
-        print(scores)
 
         scores_acc = [x[0] for x in scores]
         scores_auc = [x[1] for x in scores]
@@ -220,12 +213,8 @@ def main():
         print('overall accuracy %f' + str(np.sum(scores_acc) * 1. / fold_size))
         print('overall AUC %f' + str(np.mean(scores_auc)))
 
-    #if args.save == 1:
-    #    result_name = 'ABIDE_classification.mat'
-    #    sio.savemat('/vol/medic02/users/sparisot/python/graphCNN/results/' + result_name + '.mat',
-    #                {'lin': scores_lin, 'lin_auc': scores_auc_lin,
-    #                 'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size})
 
+    # saving the results as a csv format
     root = Path(os.getcwd()).resolve()
     if args.save == 1:
         result_name = 'ABIDE_classification'  # sans .mat
@@ -237,22 +226,47 @@ def main():
         # Dossier sur ton Drive
         save_dir = root / "results"
         save_dir.mkdir(parents=True, exist_ok=True)
-        #os.makedirs(save_dir, exist_ok=True)
 
-        #out_path = os.path.join(save_dir, result_name + ".mat")
-        out_path = save_dir / f"{result_name}.mat"
-        print("Saving results to:", out_path)
+        csv_path = save_dir / f"{result_name}.csv"
+        print("Saving CSV results to:", csv_path)
 
-        sio.savemat(
-            out_path,
-            {
-                'lin': scores_lin,
-                'lin_auc': scores_auc_lin,
-                'acc': scores_acc,
-                'auc': scores_auc,
-                'folds': fold_size
-            }
-        )
+        # Ensure we always have 1D arrays, whether we ran all folds or a single fold
+        scores_acc_arr = np.atleast_1d(scores_acc)
+        scores_auc_arr = np.atleast_1d(scores_auc)
+        scores_lin_arr = np.atleast_1d(scores_lin)
+        scores_auc_lin_arr = np.atleast_1d(scores_auc_lin)
+        fold_size_arr = np.atleast_1d(fold_size)
+
+        with open(csv_path, mode='w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'fold',
+                'fold_size',
+                'gcn_correct',
+                'gcn_acc',
+                'gcn_auc',
+                'lin_correct',
+                'lin_acc',
+                'lin_auc'
+            ])
+
+            for i in range(len(scores_acc_arr)):
+                gcn_correct = scores_acc_arr[i]
+                lin_correct = scores_lin_arr[i]
+                size = fold_size_arr[i]
+                writer.writerow([
+                    i,                           # fold index (0..9 in CV, or 0 for single fold)
+                    size,
+                    gcn_correct,
+                    gcn_correct / size,
+                    scores_auc_arr[i],
+                    lin_correct,
+                    lin_correct / size,
+                    scores_auc_lin_arr[i]
+                ])
+
+
+
 
 if __name__ == "__main__":
     main()

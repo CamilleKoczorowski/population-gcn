@@ -27,7 +27,7 @@ tf.disable_v2_behavior()
 import random
 import sys
 from gcn.utils import *
-from gcn.models import MLP, Deep_GCN
+from gcn.models import MLP, Deep_GCN, GCNII
 import sklearn.metrics
 
 
@@ -59,15 +59,29 @@ def run_training(adj, features, labels, idx_train, idx_val, idx_test,
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('model', params['model'], 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
-    flags.DEFINE_float('learning_rate', params['lrate'], 'Initial learning rate.')
-    flags.DEFINE_integer('epochs', params['epochs'], 'Number of epochs to train.')
-    flags.DEFINE_integer('hidden1', params['hidden'], 'Number of units in hidden layer 1.')
-    flags.DEFINE_float('dropout', params['dropout'], 'Dropout rate (1 - keep probability).')
-    flags.DEFINE_float('weight_decay', params['decay'], 'Weight for L2 loss on embedding matrix.')
-    flags.DEFINE_integer('early_stopping', params['early_stopping'], 'Tolerance for early stopping (# of epochs).')
-    flags.DEFINE_integer('max_degree', params['max_degree'], 'Maximum Chebyshev polynomial degree.')
-    flags.DEFINE_integer('depth', params['depth'], 'Depth of Deep GCN')
+
+    # Define flags only once, otherwise just overwrite the values
+    if not hasattr(FLAGS, 'model'):
+        flags.DEFINE_string('model', params['model'], 'Model string.')
+        flags.DEFINE_float('learning_rate', params['lrate'], 'Initial learning rate.')
+        flags.DEFINE_integer('epochs', params['epochs'], 'Number of epochs to train.')
+        flags.DEFINE_integer('hidden1', params['hidden'], 'Number of units in hidden layer 1.')
+        flags.DEFINE_float('dropout', params['dropout'], 'Dropout rate (1 - keep probability).')
+        flags.DEFINE_float('weight_decay', params['decay'], 'Weight for L2 loss on embedding matrix.')
+        flags.DEFINE_integer('early_stopping', params['early_stopping'], 'Tolerance for early stopping (# of epochs).')
+        flags.DEFINE_integer('max_degree', params['max_degree'], 'Maximum Chebyshev polynomial degree.')
+        flags.DEFINE_integer('depth', params['depth'], 'Depth of Deep GCN')
+    else:
+        FLAGS.model = params['model']
+        FLAGS.learning_rate = params['lrate']
+        FLAGS.epochs = params['epochs']
+        FLAGS.hidden1 = params['hidden']
+        FLAGS.dropout = params['dropout']
+        FLAGS.weight_decay = params['decay']
+        FLAGS.early_stopping = params['early_stopping']
+        FLAGS.max_degree = params['max_degree']
+        FLAGS.depth = params['depth']
+
 
     # Create test, val and train masked variables
     y_train, y_val, y_test, train_mask, val_mask, test_mask = get_train_test_masks(labels, idx_train, idx_val, idx_test)
@@ -86,6 +100,10 @@ def run_training(adj, features, labels, idx_train, idx_val, idx_test,
         support = [preprocess_adj(adj)]  # Not used
         num_supports = 1
         model_func = MLP
+    elif FLAGS.model == 'gcnii':
+        support = [preprocess_adj(adj)]
+        num_supports = 1
+        model_func = GCNII          # <- make sure this is imported at the top
     else:
         raise ValueError('Invalid argument for GCN model ')
     

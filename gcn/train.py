@@ -7,7 +7,7 @@ tf.disable_v2_behavior()
 
 
 from gcn.utils import *
-from gcn.models import GCN, MLP
+from gcn.models import GCN, MLP, GCNII
 
 # Set random seed
 seed = 123
@@ -44,6 +44,10 @@ elif FLAGS.model == 'dense':
     support = [preprocess_adj(adj)]  # Not used
     num_supports = 1
     model_func = MLP
+elif FLAGS.model == 'gcnii':
+    support = [preprocess_adj(adj)]
+    num_supports = 1
+    model_func = GCNII
 else:
     raise ValueError('Invalid argument for model: ' + str(FLAGS.model))
 

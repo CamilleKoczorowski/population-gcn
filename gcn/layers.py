@@ -239,5 +239,64 @@ class GraphConvolution(Layer):
         # output = tf.nn.batch_normalization(output, mean, var, offset = None, scale = None, variance_epsilon=1e-5)
 
         return self.act(output)
-        
+
+class GCNIIConvolution(Layer):
+    def __init__(self, input_dim, output_dim, placeholders,
+                 h0, alpha, beta,
+                 dropout=0., sparse_inputs=False,
+                 act=tf.nn.relu, bias=False, **kwargs):
+        super(GCNIIConvolution, self).__init__(**kwargs)
+
+        self.support = placeholders['support']     # list with one normalized adj
+        self.dropout = placeholders['dropout'] if dropout else 0.
+        self.sparse_inputs = sparse_inputs
+        self.act = act
+        self.bias = bias
+        self.output_dim = output_dim
+
+        # h0 is assumed DENSE (we'll ensure that in the model)
+        self.h0 = h0                               # initial features H^(0)
+        self.alpha = alpha                         # scalar
+        self.beta = beta                           # scalar
+
+        self.num_features_nonzero = placeholders['num_features_nonzero']
+
+        with tf.variable_scope(self.name + '_vars'):
+            self.vars['weights'] = glorot([input_dim, output_dim], name='weights')
+            if self.bias:
+                self.vars['bias'] = zeros([output_dim], name='bias')
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        x = inputs  # H^(l)
+
+        # dropout
+        if self.sparse_inputs:
+            # x is sparse here -> apply sparse dropout then densify
+            x = sparse_dropout(x, 1 - self.dropout, self.num_features_nonzero)
+            x_dense = tf.sparse_tensor_to_dense(x)
+        else:
+            x = tf.nn.dropout(x, 1 - self.dropout)
+            x_dense = x
+
+        # message passing: P H^(l)
+        # support[0] is sparse adjacency, x_dense is dense
+        propagated = dot(self.support[0], x_dense, sparse=True)  # shape: N x input_dim
+
+        # initial residual: mix propagated with H^(0)
+        mix = (1.0 - self.alpha) * propagated + self.alpha * self.h0
+
+        # identity mapping on weights:
+        # (1 - beta) * I + beta * W  ≈  (1 - beta) * mix + beta * (mix W)
+        transformed = dot(mix, self.vars['weights'], sparse=False)
+        output = (1.0 - self.beta) * mix + self.beta * transformed
+
+        if self.bias:
+            output += self.vars['bias']
+
+        return self.act(output)
+
+
         

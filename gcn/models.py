@@ -210,3 +210,112 @@ class Deep_GCN(GCN):
                                             act=lambda x: x,
                                             dropout=True,
                                             logging=self.logging))
+
+
+
+
+class GCNII(Model):
+    def __init__(self, placeholders, input_dim, depth, **kwargs):
+        self.depth = depth
+        super(GCNII, self).__init__(**kwargs)
+
+        self.inputs = placeholders['features']
+        self.input_dim = input_dim
+        self.output_dim = placeholders['labels'].get_shape().as_list()[1]
+        self.placeholders = placeholders
+
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate)
+
+        # We call build() explicitly here to construct the graph immediately
+        self.build()
+
+    def build(self):
+        """ Override base build to manage the layer flow manually """
+        with tf.variable_scope(self.name):
+            self._build()
+        
+        # Final output comes from the last activation pushed in _build
+        self.outputs = self.activations[-1]
+
+        # Store model variables for easy access
+        variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        self.vars = {var.name: var for var in variables}
+
+        # Build metrics
+        self._loss()
+        self._accuracy()
+        self.opt_op = self.optimizer.minimize(self.loss)
+
+    def _build(self):
+        # 1. Projection Layer (Map input_dim features -> hidden1 dim)
+        # This handles the sparse input and creating the dense H0
+        self.activations.append(self.inputs)
+        
+        layer0 = Dense(input_dim=self.input_dim,
+                       output_dim=FLAGS.hidden1,
+                       placeholders=self.placeholders,
+                       act=tf.nn.relu,
+                       dropout=True,
+                       sparse_inputs=True, # Handles the SparseTensor input
+                       logging=self.logging)
+        
+        self.layers.append(layer0)
+        h0_emb = layer0(self.inputs) # This is our H^(0) (N x hidden1, Dense)
+        self.activations.append(h0_emb)
+
+        # 2. GCNII Layers
+        # All these layers stay in the hidden dimension (hidden1 -> hidden1)
+        hidden_dim = FLAGS.hidden1
+        alpha = 0.1
+        beta = 0.5
+        
+        x = h0_emb
+        
+        # We add (depth + 1) GCNII layers
+        # All use h0_emb as the residual connection
+        for i in range(self.depth + 1):
+            layer = GCNIIConvolution(
+                input_dim=hidden_dim,
+                output_dim=hidden_dim,
+                placeholders=self.placeholders,
+                h0=h0_emb,   # Pass the projected dense tensor
+                alpha=alpha,
+                beta=beta,
+                act=tf.nn.relu,
+                dropout=True,
+                sparse_inputs=False, # Inputs are now dense
+                logging=self.logging
+            )
+            self.layers.append(layer)
+            x = layer(x)
+            self.activations.append(x)
+
+        # 3. Final Classifier (hidden1 -> output_dim)
+        layer_out = Dense(input_dim=hidden_dim,
+                          output_dim=self.output_dim,
+                          placeholders=self.placeholders,
+                          act=lambda x: x, # No activation before softmax
+                          dropout=True,
+                          logging=self.logging)
+        
+        self.layers.append(layer_out)
+        final_out = layer_out(x)
+        self.activations.append(final_out)
+
+    def _loss(self):
+        # Weight decay loss (applied to the first projection layer)
+        for var in self.layers[0].vars.values():
+            self.loss += FLAGS.weight_decay * tf.nn.l2_loss(var)
+
+        # Cross entropy error
+        self.loss += masked_softmax_cross_entropy(self.outputs, self.placeholders['labels'],
+                                                  self.placeholders['labels_mask'])
+
+    def _accuracy(self):
+        self.accuracy = masked_accuracy(self.outputs, self.placeholders['labels'],
+                                        self.placeholders['labels_mask'])
+        self.auc = masked_auc(self.outputs, self.placeholders['labels'],
+                                        self.placeholders['labels_mask'])
+
+    def predict(self):
+        return tf.nn.softmax(self.outputs)
