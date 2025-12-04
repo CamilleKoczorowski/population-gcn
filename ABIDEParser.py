@@ -22,6 +22,8 @@ import scipy.io as sio
 from sklearn.linear_model import RidgeClassifier
 from sklearn.feature_selection import RFE
 from nilearn import connectome
+from pathlib import Path
+import os
 
 
 # Reading and computing the input data
@@ -30,9 +32,11 @@ from nilearn import connectome
 pipeline = 'cpac'
 
 # Input data variables
-root_folder = '/path/to/data/'
-data_folder = os.path.join(root_folder, 'ABIDE_pcp/cpac/filt_noglobal')
-phenotype = os.path.join(root_folder, 'ABIDE_pcp/Phenotypic_V1_0b_preprocessed1.csv')
+# Trouver le dossier du notebook
+root_folder = Path(os.getcwd()).resolve()
+#root_folder = #'/path/to/data/'
+data_folder = os.path.join(root_folder, 'data/ABIDE_pcp/cpac/filt_noglobal')
+phenotype = os.path.join(root_folder, 'data/Phenotypic_V1_0b_preprocessed1.csv')
 
 
 def fetch_filenames(subject_IDs, file_type):
