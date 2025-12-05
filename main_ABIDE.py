@@ -134,6 +134,8 @@ def main():
     args = parser.parse_args()
     start_time = time.time()
 
+    Reader.set_paths(args.atlas)
+
     # GCN Parameters
     params = dict()
     params['model'] = args.model                    # gcn model using chebyshev polynomials

@@ -34,9 +34,41 @@ pipeline = 'cpac'
 # Input data variables
 # Trouver le dossier du notebook
 root_folder = Path(os.getcwd()).resolve()
-#root_folder = #'/path/to/data/'
+
+#if you want to use ho altlas
 data_folder = os.path.join(root_folder, 'data/ABIDE_pcp/cpac/filt_noglobal')
 phenotype = os.path.join(root_folder, 'data/Phenotypic_V1_0b_preprocessed1.csv')
+
+#if you want to use aal atlas
+#data_folder = os.path.join(root_folder, 'data/ABIDE_aal')
+#phenotype = os.path.join(root_folder, 'data/ABIDE_aal/Phenotypic_V1_0b_preprocessed1.csv')
+
+def set_paths(atlas):
+    """
+    Configure dynamiquement les chemins en fonction de l'atlas choisi.
+    Appelé par main_ABIDE.py au démarrage.
+    """
+    global data_folder, phenotype
+    
+    if atlas == 'aal':
+        print("--- CONFIGURATION ABIDE : ATLAS AAL ---")
+        data_folder = os.path.join(root_folder, 'data/ABIDE_aal')
+        phenotype_aal = os.path.join(root_folder, 'data/ABIDE_aal/Phenotypic_V1_0b_preprocessed1.csv')
+        
+        # Sécurité : si le csv n'est pas dans le dossier AAL, on prend celui de base
+        if os.path.exists(phenotype_aal):
+            phenotype = phenotype_aal
+        else:
+            print("Note : Phenotype AAL non trouvé, utilisation du Phenotype standard.")
+            phenotype = os.path.join(root_folder, 'data/Phenotypic_V1_0b_preprocessed1.csv')
+            
+    else:
+        print("--- CONFIGURATION ABIDE : ATLAS HO (Standard) ---")
+        data_folder = os.path.join(root_folder, 'data/ABIDE_pcp/cpac/filt_noglobal')
+        phenotype = os.path.join(root_folder, 'data/Phenotypic_V1_0b_preprocessed1.csv')
+        
+    print(f"Data Folder : {data_folder}")
+    print(f"Phenotype   : {phenotype}")
 
 
 def fetch_filenames(subject_IDs, file_type):
@@ -218,8 +250,23 @@ def get_networks(subject_list, kind, atlas_name="aal", variable='connectivity'):
 
     all_networks = []
     for subject in subject_list:
-        fl = os.path.join(data_folder, subject,
-                          subject + "_" + atlas_name + "_" + kind + ".mat")
+        #fl = os.path.join(data_folder, subject,
+        #                  subject + "_" + atlas_name + "_" + kind + ".mat")
+
+        filename = f"{subject}_{atlas_name}_{kind}.mat"
+        
+        # Seule modification conservée : la recherche du chemin
+        path_nested = os.path.join(data_folder, subject, filename)
+        path_flat = os.path.join(data_folder, filename)
+        
+        if os.path.exists(path_nested):
+            fl = path_nested
+        elif os.path.exists(path_flat):
+            fl = path_flat
+        else:
+            # On garde le comportement par défaut (ça plantera si pas trouvé, comme l'original)
+            fl = path_nested
+
         matrix = sio.loadmat(fl)[variable]
         all_networks.append(matrix)
     # all_networks=np.array(all_networks)
