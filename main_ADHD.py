@@ -169,6 +169,11 @@ def main():
     # Graphe phénotypique : Sexe et Site (Hypothèse 1 - Baseline)
     # Vous pourrez ajouter 'AGE_AT_SCAN' ici plus tard
     graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'AGE_AT_SCAN'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'FIQ'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'MED_STATUS'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'HANDEDNESS'], subject_IDs)
+
 
     # Cross Validation
     skf = StratifiedKFold(n_splits=10)

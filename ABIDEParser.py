@@ -176,6 +176,9 @@ def get_subject_score(subject_list, score):
         reader = csv.DictReader(csv_file)
         for row in reader:
             if row['SUB_ID'] in subject_list:
+                val = row[score]
+                if val == '' or val == '-9999' or val == -9999:
+                    continue
                 scores_dict[row['SUB_ID']] = row[score]
 
     return scores_dict
@@ -304,14 +307,17 @@ def create_affinity_graph_from_scores(scores, subject_list):
                         if val < 2:
                             graph[k, j] += 1
                             graph[j, k] += 1
-                    except ValueError:  # missing label
+                    except (ValueError, KeyError):  # missing label
                         pass
 
         else:
             for k in range(num_nodes):
                 for j in range(k + 1, num_nodes):
-                    if label_dict[subject_list[k]] == label_dict[subject_list[j]]:
-                        graph[k, j] += 1
-                        graph[j, k] += 1
+                    try :
+                        if label_dict[subject_list[k]] == label_dict[subject_list[j]]:
+                            graph[k, j] += 1
+                            graph[j, k] += 1
+                    except KeyError:
+                        pass
 
     return graph

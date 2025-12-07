@@ -30,7 +30,10 @@ def get_subject_score(subject_list, score):
         'DX_GROUP': 'DX',
         'SITE_ID': 'Site',
         'SEX': 'Gender',
-        'AGE_AT_SCAN': 'Age'
+        'AGE_AT_SCAN': 'Age',
+        'FIQ': 'Full4 IQ',        
+        'HANDEDNESS': 'Handedness', 
+        'MED_STATUS': 'Med Status'  
     }
     
     target_col = key_map.get(score, score)
@@ -59,6 +62,9 @@ def get_subject_score(subject_list, score):
             if str(sub_id) in subject_list:
                 try:
                     val = row[target_col]
+
+                    if val == '' or val == '-999' or val == -999:
+                        continue 
                     
                     # Conversion Diagnostic pour le GCN
                     if score == 'DX_GROUP':
@@ -144,7 +150,10 @@ def create_affinity_graph_from_scores(scores, subject_list):
             for k in range(num_nodes):
                 for j in range(k + 1, num_nodes):
                     if subject_list[k] in label_dict and subject_list[j] in label_dict:
-                        if label_dict[subject_list[k]] == label_dict[subject_list[j]]:
-                            graph[k, j] += 1
-                            graph[j, k] += 1
+                        try: 
+                            if label_dict[subject_list[k]] == label_dict[subject_list[j]]:
+                                graph[k, j] += 1
+                                graph[j, k] += 1
+                        except KeyError:
+                            pass
     return graph
