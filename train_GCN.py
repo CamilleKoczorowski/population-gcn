@@ -27,8 +27,9 @@ tf.disable_v2_behavior()
 import random
 import sys
 from gcn.utils import *
-from gcn.models import MLP, Deep_GCN
+#from gcn.models import MLP, Deep_GCN
 import sklearn.metrics
+from gcn_vae.models import MLP, Deep_GCN, DynamicGCN
 
 
 def get_train_test_masks(labels, idx_train, idx_val, idx_test):
@@ -59,17 +60,24 @@ def run_training(adj, features, labels, idx_train, idx_val, idx_test,
     # Settings
     flags = tf.app.flags
     FLAGS = flags.FLAGS
-    flags.DEFINE_string('model', params['model'], 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
-    flags.DEFINE_float('learning_rate', params['lrate'], 'Initial learning rate.')
-    flags.DEFINE_integer('epochs', params['epochs'], 'Number of epochs to train.')
-    flags.DEFINE_integer('hidden1', params['hidden'], 'Number of units in hidden layer 1.')
-    flags.DEFINE_float('dropout', params['dropout'], 'Dropout rate (1 - keep probability).')
-    flags.DEFINE_float('weight_decay', params['decay'], 'Weight for L2 loss on embedding matrix.')
-    flags.DEFINE_integer('early_stopping', params['early_stopping'], 'Tolerance for early stopping (# of epochs).')
-    flags.DEFINE_integer('max_degree', params['max_degree'], 'Maximum Chebyshev polynomial degree.')
-    flags.DEFINE_integer('depth', params['depth'], 'Depth of Deep GCN')
 
-    # Create test, val and train masked variables
+    def safe_define(name, value, desc, type_func):
+        if name not in FLAGS:
+            type_func(name, value, desc)
+        else:
+            FLAGS.__setattr__(name, value)
+
+
+    safe_define('model', params['model'], 'Model string.', flags.DEFINE_string)
+    safe_define('learning_rate', params['lrate'], 'Initial learning rate.', flags.DEFINE_float)
+    safe_define('epochs', params['epochs'], 'Number of epochs to train.', flags.DEFINE_integer)
+    safe_define('hidden1', params['hidden'], 'Number of units in hidden layer 1.', flags.DEFINE_integer)
+    safe_define('dropout', params['dropout'], 'Dropout rate (1 - keep probability).', flags.DEFINE_float)
+    safe_define('weight_decay', params['decay'], 'Weight for L2 loss on embedding matrix.', flags.DEFINE_float)
+    safe_define('early_stopping', params['early_stopping'], 'Tolerance for early stopping (# of epochs).', flags.DEFINE_integer)
+    safe_define('max_degree', params['max_degree'], 'Maximum Chebyshev polynomial degree.', flags.DEFINE_integer)
+    safe_define('depth', params['depth'], 'Depth of Deep GCN', flags.DEFINE_integer)
+
     y_train, y_val, y_test, train_mask, val_mask, test_mask = get_train_test_masks(labels, idx_train, idx_val, idx_test)
     
     # Some preprocessing
@@ -86,6 +94,10 @@ def run_training(adj, features, labels, idx_train, idx_val, idx_test,
         support = [preprocess_adj(adj)]  # Not used
         num_supports = 1
         model_func = MLP
+    elif FLAGS.model == 'dynamic_pheno':
+        support = [preprocess_adj(adj)] 
+        num_supports = 1
+        model_func = DynamicGCN
     else:
         raise ValueError('Invalid argument for GCN model ')
     

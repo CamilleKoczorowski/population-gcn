@@ -28,7 +28,11 @@ import scipy.io as sio
 import os
 from pathlib import Path
 
-import ABIDEParser as Reader
+#import ABIDEParser as Reader
+#import ABIDEParser_age_continu as Reader
+#import ABIDEParser_gauche_droite as Reader
+import ABIDEParserVAE as Reader
+
 import train_GCN as Train
 
 
@@ -177,10 +181,20 @@ def main():
 
     # Compute feature vectors (vectorised connectivity networks)
     features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
+    features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
+    pheno_features = Reader.get_phenotypic_features(subject_IDs)
+    features = np.hstack((features, pheno_features))
 
     # Compute population graph using gender and acquisition site
-    graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs)
-
+    #graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID', 'AGE_AT_SCAN'], subject_IDs, sigma=3) #pour age gauss
+    #graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID', 'AGE_AT_SCAN', 'HANDEDNESS_CATEGORY'], subject_IDs, sigma=0.000001 )
+    
+    graph = Reader.create_affinity_graph_from_scores(
+        ['SEX', 'SITE_ID', 'AGE_AT_SCAN', 'FIQ'], 
+        subject_IDs, 
+        sigma=0.000001
+    )
     # Folds for cross validation experiments
     skf = StratifiedKFold(n_splits=10)
 
