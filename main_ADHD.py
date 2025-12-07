@@ -56,27 +56,6 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
     return test_acc, test_auc, lin_acc, lin_auc, len(test_ind)
 
 def main():
-    #parser = argparse.ArgumentParser(description='Graph CNNs for ADHD dataset')
-    #parser.add_argument('--dropout', default=0.3, type=float)
-    #parser.add_argument('--decay', default=5e-4, type=float)
-    #parser.add_argument('--hidden', default=16, type=int)
-    #parser.add_argument('--lrate', default=0.005, type=float)
-    #
-    ## IMPORTANT : Par défaut 'aal' car c'est ce qu'on a dans le dossier
-    #parser.add_argument('--atlas', default='aal', help='Atlas name (default: aal)')
-    #
-    #parser.add_argument('--epochs', default=150, type=int)
-    #parser.add_argument('--num_features', default=2000, type=int)
-    #parser.add_argument('--num_training', default=1.0, type=float)
-    #parser.add_argument('--depth', default=0, type=int)
-    #parser.add_argument('--model', default='gcn_cheby')
-    #parser.add_argument('--seed', default=123, type=int)
-    #parser.add_argument('--folds', default=11, type=int)
-    #parser.add_argument('--connectivity', default='correlation') 
-    #parser.add_argument('--suffix', type=str, default="",
-    #                help='Suffixe ajouté au nom du fichier de résultats (.mat)')
-#
-    #args = parser.parse_args()
 
     parser = argparse.ArgumentParser(description='Graph CNNs for population graphs: '
                                                  'classification of the ABIDE dataset')
@@ -123,6 +102,7 @@ def main():
     params['hidden'] = args.hidden                  # Number of units in hidden layers
     params['decay'] = args.decay                    # Weight for L2 loss on embedding matrix.
     params['early_stopping'] = params['epochs']     # Tolerance for early stopping (# of epochs). No early stopping if set to param.epochs
+    #params['early_stopping'] = 15
     params['max_degree'] = 3                        # Maximum Chebyshev polynomial degree.
     params['depth'] = args.depth                    # number of additional hidden layers in the GCN. Total number of hidden layers: 1+depth
     params['seed'] = args.seed                      # seed for random initialisation
@@ -167,8 +147,9 @@ def main():
             site[i] = unique_sites.index(sites[sid])
         
     # Graphe phénotypique : Sexe et Site (Hypothèse 1 - Baseline)
-    # Vous pourrez ajouter 'AGE_AT_SCAN' ici plus tard
-    graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SEX'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID'], subject_IDs)
+    graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs) #baseline parisot
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'AGE_AT_SCAN'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'FIQ'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'MED_STATUS'], subject_IDs)
