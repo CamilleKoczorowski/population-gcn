@@ -1,7 +1,7 @@
 import os
 import csv
-from pathlib import Path
 import time
+from pathlib import Path
 
 import numpy as np
 from scipy import sparse
@@ -9,15 +9,17 @@ from scipy.spatial import distance
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import RidgeClassifier
 import sklearn.metrics
+from joblib import Parallel, delayed  # <- parallelisation
 
 import ABIDEParser as Reader
 import train_GCN as Train
 
 
+# ---------- Data building ----------
+
 def build_abide_data(connectivity="correlation", atlas="ho"):
     """
     Load ABIDE data, build labels, features, and phenotypic graph.
-    Same logic as the original ABIDE main script.
     """
     # Subject IDs
     subject_IDs = Reader.get_ids()
@@ -80,6 +82,8 @@ def build_final_graph_and_features(features, y, train_ind, params, subject_IDs, 
     return final_graph, x_data
 
 
+# ---------- Single-fold training ----------
+
 def train_single_split(train_ind, test_ind,
                        features, y, y_data, subject_IDs,
                        phenotypic_graph, params):
@@ -116,6 +120,44 @@ def train_single_split(train_ind, test_ind,
     return float(test_acc), float(test_auc), float(lin_acc), float(lin_auc), len(test_ind)
 
 
+# Wrapper to be used by joblib (one fold)
+def run_fold_for_config(fold_id, train_idx, test_idx,
+                        features, y, y_data, subject_IDs,
+                        phenotypic_graph, params,
+                        model, hidden, depth, K):
+    """
+    Run one fold for a given config and return a dict (one CSV row).
+    """
+    start = time.time()
+    test_acc, test_auc, lin_acc, lin_auc, fold_size = train_single_split(
+        train_idx, test_idx,
+        features, y, y_data,
+        subject_IDs,
+        phenotypic_graph,
+        params
+    )
+    elapsed = time.time() - start
+
+    print(f"  Fold {fold_id}/10: "
+          f"GCN ACC={test_acc:.4f}, AUC={test_auc:.4f} | "
+          f"LIN ACC={lin_acc:.4f}, AUC={lin_auc:.4f} | "
+          f"Time={elapsed:.2f}s")
+
+    return {
+        "model": model,
+        "hidden": hidden,
+        "depth": depth,
+        "cheby_K": K if model == 'gcn_cheby' else None,
+        "cv": fold_id,
+        "test_acc": test_acc,
+        "test_auc": test_auc,
+        "lin_acc": lin_acc,
+        "lin_auc": lin_auc,
+        "n_test": fold_size,
+        "time_sec": elapsed,
+    }
+
+
 def get_base_params():
     """
     Base hyperparameters (kept fixed across all architecture experiments),
@@ -123,7 +165,7 @@ def get_base_params():
     """
     params = dict()
     params['lrate'] = 0.005          # learning rate
-    params['epochs'] = 10            # max epochs
+    params['epochs'] = 150          # max epochs
     params['dropout'] = 0.3          # dropout rate
     params['hidden'] = 16            # will be overridden in the grid
     params['decay'] = 5e-4           # L2 weight decay
@@ -149,6 +191,8 @@ def main():
 
     # ---------- 2. 10-fold stratified cross-validation ----------
     skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=123)
+    # Precompute splits so they are reused identically for all configs
+    fold_splits = list(skf.split(all_indices, y_flat))
 
     # ---------- 3. Define architecture hyperparameter grid ----------
     model_list = ['gcn', 'gcn_cheby', 'gcnii']   # Kipf vs Chebyshev vs GCNII
@@ -156,17 +200,19 @@ def main():
     depth_list = [0, 1, 2]                      # total hidden layers = 1 + depth
     cheby_K_list = [1, 3, 5]                    # relevant only for gcn_cheby
 
-    results = []
+    # How many folds to run in parallel for each config
+    N_JOBS = 10  # you can set to e.g. os.cpu_count()
 
-    # ---------- 4. Run experiments with 10-fold CV ----------
+    all_rows = []  # one row per (config, fold)
+
+    # ---------- 4. Run experiments with 10-fold CV (parallel over folds) ----------
     for model in model_list:
         for hidden in hidden_list:
             for depth in depth_list:
                 if model == 'gcn_cheby':
                     K_values = cheby_K_list
                 else:
-                    # For Kipf GCN / GCNII, K is conceptually 1; we still store it for the table
-                    K_values = [1]
+                    K_values = [1]  # dummy K for GCN / GCNII
 
                 for K in K_values:
                     params = get_base_params()
@@ -179,100 +225,55 @@ def main():
                     print(f"Config: model={model}, hidden={hidden}, depth={depth}, K={K}")
                     print("============================================")
 
-                    fold_test_acc = []
-                    fold_test_auc = []
-                    fold_lin_acc = []
-                    fold_lin_auc = []
-                    fold_sizes = []
-
                     config_start = time.time()
 
-                    for fold_id, (train_idx, test_idx) in enumerate(
-                        skf.split(all_indices, y_flat), start=1
-                    ):
-                        print(f"\n  Fold {fold_id}/10")
-                        start = time.time()
-
-                        test_acc, test_auc, lin_acc, lin_auc, fold_size = train_single_split(
-                            train_idx, test_idx,
-                            features, y, y_data,
-                            subject_IDs,
-                            phenotypic_graph,
-                            params
+                    # Run all folds for this config in parallel
+                    fold_rows = Parallel(n_jobs=N_JOBS)(
+                        delayed(run_fold_for_config)(
+                            fold_id=fold_id + 1,
+                            train_idx=train_idx,
+                            test_idx=test_idx,
+                            features=features,
+                            y=y,
+                            y_data=y_data,
+                            subject_IDs=subject_IDs,
+                            phenotypic_graph=phenotypic_graph,
+                            params=params,
+                            model=model,
+                            hidden=hidden,
+                            depth=depth,
+                            K=K
                         )
-                        elapsed = time.time() - start
-
-                        print(f"    GCN  -> ACC={test_acc:.4f}, AUC={test_auc:.4f}")
-                        print(f"    LIN  -> ACC={lin_acc:.4f}, AUC={lin_auc:.4f}")
-                        print(f"    Time -> {elapsed:.2f}s")
-
-                        fold_test_acc.append(test_acc)
-                        fold_test_auc.append(test_auc)
-                        fold_lin_acc.append(lin_acc)
-                        fold_lin_auc.append(lin_auc)
-                        fold_sizes.append(fold_size)
+                        for fold_id, (train_idx, test_idx) in enumerate(fold_splits)
+                    )
 
                     config_elapsed = time.time() - config_start
+                    print(f"Total time for config -> {config_elapsed:.2f}s")
 
-                    # Aggregate metrics over the 10 folds
-                    test_acc_mean = float(np.mean(fold_test_acc))
-                    test_acc_std = float(np.std(fold_test_acc))
-                    test_auc_mean = float(np.mean(fold_test_auc))
-                    test_auc_std = float(np.std(fold_test_auc))
+                    all_rows.extend(fold_rows)
 
-                    lin_acc_mean = float(np.mean(fold_lin_acc))
-                    lin_acc_std = float(np.std(fold_lin_acc))
-                    lin_auc_mean = float(np.mean(fold_lin_auc))
-                    lin_auc_std = float(np.std(fold_lin_auc))
-
-                    print("\n  ---------- 10-fold CV summary ----------")
-                    print(f"  GCN  -> ACC={test_acc_mean:.4f} ± {test_acc_std:.4f}, "
-                          f"AUC={test_auc_mean:.4f} ± {test_auc_std:.4f}")
-                    print(f"  LIN  -> ACC={lin_acc_mean:.4f} ± {lin_acc_std:.4f}, "
-                          f"AUC={lin_auc_mean:.4f} ± {lin_auc_std:.4f}")
-                    print(f"  Total time for config -> {config_elapsed:.2f}s")
-
-                    results.append({
-                        "model": model,
-                        "hidden": hidden,
-                        "depth": depth,
-                        "cheby_K": K if model == 'gcn_cheby' else None,
-                        "test_acc_mean": test_acc_mean,
-                        "test_acc_std": test_acc_std,
-                        "test_auc_mean": test_auc_mean,
-                        "test_auc_std": test_auc_std,
-                        "lin_acc_mean": lin_acc_mean,
-                        "lin_acc_std": lin_acc_std,
-                        "lin_auc_mean": lin_auc_mean,
-                        "lin_auc_std": lin_auc_std,
-                        "n_test_total": int(sum(fold_sizes)),
-                        "n_folds": len(fold_sizes),
-                        "time_sec_total": config_elapsed,
-                    })
-
-    # ---------- 5. Save aggregated CV results to CSV ----------
+    # ---------- 5. Save per-fold CV results to CSV ----------
     root = Path(os.getcwd()).resolve()
     save_dir = root / "results"
     save_dir.mkdir(parents=True, exist_ok=True)
-    out_path = save_dir / "gcn_gcnii_10fold_cv.csv"
+    out_path = save_dir / "gcn_gcnii_10cv.csv"
 
     fieldnames = [
         "model", "hidden", "depth", "cheby_K",
-        "test_acc_mean", "test_acc_std",
-        "test_auc_mean", "test_auc_std",
-        "lin_acc_mean", "lin_acc_std",
-        "lin_auc_mean", "lin_auc_std",
-        "n_test_total", "n_folds", "time_sec_total"
+        "cv",
+        "test_acc", "test_auc",
+        "lin_acc", "lin_auc",
+        "n_test", "time_sec"
     ]
 
     with open(out_path, mode="w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        for row in results:
+        for row in all_rows:
             writer.writerow(row)
 
     print("\nAll experiments finished.")
-    print("Results saved to:", out_path)
+    print("Per-fold CV results saved to:", out_path)
 
 
 if __name__ == "__main__":
