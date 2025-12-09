@@ -193,8 +193,10 @@ class MetricGraphLearner(Layer):
     Apprend une matrice d'adjacence dynamique basée sur la distance
     dans un espace latent.
     """
-    def __init__(self, input_dim, embedding_dim=64, act=tf.nn.relu, **kwargs):
+    def __init__(self, input_dim, embedding_dim=64, act=tf.nn.relu, sparse_inputs=False, **kwargs):
         super(MetricGraphLearner, self).__init__(**kwargs)
+        # CORRECTION : On enregistre si l'entrée est sparse pour éviter le crash du logging
+        self.sparse_inputs = sparse_inputs 
         self.act = act
         self.embedding_dim = embedding_dim
         

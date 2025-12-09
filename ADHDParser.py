@@ -132,28 +132,57 @@ def site_percentage(train_ind, perc, subject_list):
         labeled_indices.extend(train_ind[id_in_site[:labeled_num]])
     return labeled_indices
 
-def create_affinity_graph_from_scores(scores, subject_list):
+def create_affinity_graph_from_scores(scores, subject_list, sigma=2.0):
     num_nodes = len(subject_list)
     graph = np.zeros((num_nodes, num_nodes))
+
     for l in scores:
+        print(f"Traitement de la variable : {l}...")
         label_dict = get_subject_score(subject_list, l)
+
+        # VARIABLES QUANTITATIVES (Âge, QI)
         if l in ['AGE_AT_SCAN', 'FIQ']:
             for k in range(num_nodes):
                 for j in range(k + 1, num_nodes):
                     try:
-                        val = abs(float(label_dict[subject_list[k]]) - float(label_dict[subject_list[j]]))
-                        if val < 2:
-                            graph[k, j] += 1
-                            graph[j, k] += 1
-                    except (ValueError, KeyError): pass
+                        val_k = float(label_dict[subject_list[k]])
+                        val_j = float(label_dict[subject_list[j]])
+
+                        
+                        if val_k == -9999 or val_j == -9999:
+                            continue
+
+                        val = abs(val_k - val_j)
+                        
+                        # Sigma adaptatif : 2 ans pour l'âge, mais 10 points pour le QI
+                        # (On garde 2.0 par défaut pour l'âge)
+                        current_sigma = 10.0 if l == 'FIQ' else sigma
+                        
+                        weight = np.exp(- (val**2) / (2 * current_sigma**2))
+                        
+                        graph[k, j] += weight
+                        graph[j, k] += weight
+                        
+                    except ValueError: 
+                        pass
+
+        #VARIABLES CATÉGORIELLES (Sexe, Site, Latéralité)
         else:
             for k in range(num_nodes):
                 for j in range(k + 1, num_nodes):
-                    if subject_list[k] in label_dict and subject_list[j] in label_dict:
-                        try: 
-                            if label_dict[subject_list[k]] == label_dict[subject_list[j]]:
-                                graph[k, j] += 1
-                                graph[j, k] += 1
-                        except KeyError:
-                            pass
+                    try:
+                        val_k = label_dict[subject_list[k]]
+                        val_j = label_dict[subject_list[j]]
+                        
+                    
+                        invalid_values = ['-9999', 'NaN', 'None', '', ' ']
+                        if str(val_k) in invalid_values or str(val_j) in invalid_values:
+                            continue
+
+                        if val_k == val_j:
+                            graph[k, j] += 1
+                            graph[j, k] += 1
+                    except KeyError:
+                        pass
+
     return graph

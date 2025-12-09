@@ -182,8 +182,8 @@ def main():
     # Compute feature vectors (vectorised connectivity networks)
     features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
     features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
-    #pheno_features = Reader.get_phenotypic_features(subject_IDs)  ####pour vae
-    #features = np.hstack((features, pheno_features)) #####pour vae
+    pheno_features = Reader.get_phenotypic_features(subject_IDs)  ####pour vae
+    features = np.hstack((features, pheno_features)) #####pour vae
 
     # Compute population graph using gender and acquisition site
     #graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID', 'AGE_AT_SCAN'], subject_IDs, sigma=3) #pour age gauss

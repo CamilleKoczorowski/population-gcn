@@ -104,12 +104,12 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
 def main():
     parser = argparse.ArgumentParser(description='Graph CNNs for population graphs: '
                                                  'classification of the ABIDE dataset')
-    parser.add_argument('--dropout', default=0.3, type=float,
+    parser.add_argument('--dropout', default=0., type=float,
                         help='Dropout rate (1 - keep probability) (default: 0.3)')
     parser.add_argument('--decay', default=5e-4, type=float,
                         help='Weight for L2 loss on embedding matrix (default: 5e-4)')
     parser.add_argument('--hidden', default=16, type=int, help='Number of filters in hidden layers (default: 16)')
-    parser.add_argument('--lrate', default=0.005, type=float, help='Initial learning rate (default: 0.005)')
+    parser.add_argument('--lrate', default=0.01, type=float, help='Initial learning rate (default: 0.005)')
     parser.add_argument('--atlas', default='ho', help='atlas for network construction (node definition) (default: ho, '
                                                       'see preprocessed-connectomes-project.org/abide/Pipelines.html '
                                                       'for more options )')
@@ -122,7 +122,7 @@ def main():
                                                                         'training (default: 1.0)')
     parser.add_argument('--depth', default=0, type=int, help='Number of additional hidden layers in the GCN. '
                                                              'Total number of hidden layers: 1+depth (default: 0)')
-    parser.add_argument('--model', default='gcn_cheby', help='gcn model used (default: gcn_cheby, '
+    parser.add_argument('--model', default='dynamic_pheno', help='gcn model used (default: gcn_cheby, '
                                                              'uses chebyshev polynomials, '
                                                              'options: gcn, gcn_cheby, dense )')
     parser.add_argument('--seed', default=123, type=int, help='Seed for random initialisation (default: 123)')
@@ -181,6 +181,8 @@ def main():
 
     # Compute feature vectors (vectorised connectivity networks)
     features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
+    pheno_features = Reader.get_phenotypic_features(subject_IDs)  ####pour vae
+    features = np.hstack((features, pheno_features))
 
     # Compute population graph using gender and acquisition site
     #graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID', 'AGE_AT_SCAN'], subject_IDs, sigma=3) #pour age gauss

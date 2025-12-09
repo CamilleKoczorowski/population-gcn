@@ -27,9 +27,9 @@ tf.disable_v2_behavior()
 import random
 import sys
 from gcn.utils import *
-from gcn.models import MLP, Deep_GCN
+#from gcn.models import MLP, Deep_GCN
 import sklearn.metrics
-#from gcn_vae.models import MLP, Deep_GCN, DynamicGCN
+from gcn_vae.models import MLP, Deep_GCN, DynamicGCN
 
 
 def get_train_test_masks(labels, idx_train, idx_val, idx_test):
