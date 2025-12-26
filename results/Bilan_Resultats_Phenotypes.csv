@@ -1,0 +1,17 @@
+Configuration;Dataset;Accuracy (%);AUC (%)
+Reference (Site + Sex);ABIDE (HO);69.0 ± 3.19;74.66 ± 4.51
+Baseline (Site + Sex);ABIDE (AAL);67.28 ± 4.54;72.31 ± 5.71
+Baseline (Site + Sex);ADHD (AAL);69.41 ± 5.85;73.83 ± 6.76
+Site Only;ABIDE (AAL);64.76 ± 6.25;71.02 ± 5.18
+Site Only;ADHD (AAL);65.61 ± 7.09;70.0 ± 8.85
+Sex Only;ABIDE (AAL);65.33 ± 5.43;70.16 ± 5.98
+Sex Only;ADHD (AAL);66.33 ± 4.69;67.73 ± 6.95
+Site + Sex + FIQ;ABIDE (AAL);64.52 ± 5.76;70.86 ± 5.54
+Site + Sex + FIQ;ADHD (AAL);69.06 ± 5.68;73.74 ± 6.13
+Site + Sex + Handedness;ABIDE (AAL);65.55 ± 6.89;70.83 ± 5.77
+Site + Sex + Handedness;ADHD (AAL);69.76 ± 5.03;72.28 ± 7.46
+Site + Sex + Age (< 2y);ABIDE (AAL);65.32 ± 5.83;71.38 ± 5.51
+Site + Sex + Age (< 2y);ADHD (AAL);68.89 ± 6.25;71.63 ± 6.88
+Site + Sex + Age (< 1y);ADHD (AAL);67.68 ± 4.46;72.1 ± 6.99
+Site + Sex + Age (< 4y);ADHD (AAL);69.58 ± 5.5;73.79 ± 6.67
+Site + Sex + Age (< 6y);ADHD (AAL);69.24 ± 4.73;73.8 ± 6.35

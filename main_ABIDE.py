@@ -181,11 +181,13 @@ def main():
     features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
 
     # Compute population graph using gender and acquisition site
+    #graph = Reader.create_affinity_graph_from_scores(['SEX'], subject_IDs)
+    graph = Reader.create_affinity_graph_from_scores(['SITE_ID'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'AGE_AT_SCAN'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'FIQ'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'CURRENT_MED_STATUS'], subject_IDs)
-    graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'HANDEDNESS_CATEGORY'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'HANDEDNESS_CATEGORY'], subject_IDs)
 
     # Folds for cross validation experiments
     skf = StratifiedKFold(n_splits=10)

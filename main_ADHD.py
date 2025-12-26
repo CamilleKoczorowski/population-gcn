@@ -153,6 +153,7 @@ def main():
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'AGE_AT_SCAN'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'FIQ'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'MED_STATUS'], subject_IDs)
+    #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'AGE_AT_SCAN', 'MED_STATUS'], subject_IDs)
     #graph = Reader.create_affinity_graph_from_scores(['SITE_ID', 'SEX', 'HANDEDNESS'], subject_IDs)
 
 

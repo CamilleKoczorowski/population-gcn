@@ -142,7 +142,7 @@ def create_affinity_graph_from_scores(scores, subject_list):
                 for j in range(k + 1, num_nodes):
                     try:
                         val = abs(float(label_dict[subject_list[k]]) - float(label_dict[subject_list[j]]))
-                        if val < 2:
+                        if val < 6:
                             graph[k, j] += 1
                             graph[j, k] += 1
                     except (ValueError, KeyError): pass
